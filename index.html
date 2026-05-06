@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Loan Partner portal for Reno Research — manage and action renovation loan leads.">
+
+  <!-- Disable caching -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Loan Partner">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Loan Partner — Reno Research</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- Version check and auto-refresh on new deployment -->
+  <script>
+    (async function() {
+      const STORAGE_KEY = 'lp_app_version';
+      const CHECK_INTERVAL = 60000; // Check every 60 seconds
+
+      async function checkVersion() {
+        try {
+          const response = await fetch('version.json?t=' + Date.now(), {
+            cache: 'no-store',
+            headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+          });
+
+          if (!response.ok) {
+            console.warn('Version check: failed to fetch version.json', response.status);
+            return;
+          }
+
+          const data = await response.json();
+          const serverVersion = data.version + '_' + data.buildTime;
+          const storedVersion = localStorage.getItem(STORAGE_KEY);
+
+          if (storedVersion && storedVersion !== serverVersion) {
+            console.log('New version available:', serverVersion, '(was:', storedVersion + ')');
+            localStorage.setItem(STORAGE_KEY, serverVersion);
+
+            if (window.confirm('A new version of Loan Partner is available. Refresh now to get the latest updates?')) {
+              performHardRefresh();
+            }
+            return;
+          }
+
+          if (!storedVersion) {
+            console.log('Initial version:', serverVersion);
+            localStorage.setItem(STORAGE_KEY, serverVersion);
+          }
+        } catch (e) {
+          console.log('Version check failed:', e.message);
+        }
+      }
+
+      async function performHardRefresh() {
+        try {
+          if (window.caches) {
+            const names = await caches.keys();
+            await Promise.all(names.map(name => caches.delete(name)));
+          }
+
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(r => r.unregister()));
+          }
+
+          window.location.href = window.location.href.split('#')[0] + '?t=' + Date.now();
+        } catch (e) {
+          console.error('Error during refresh:', e);
+          window.location.reload(true);
+        }
+      }
+
+      // Initial check on load
+      await checkVersion();
+
+      // Periodic check every 60 seconds
+      setInterval(checkVersion, CHECK_INTERVAL);
+
+      // Check when tab regains focus
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+          checkVersion();
+        }
+      });
+
+      // Force service worker update on load
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            registration.update().catch(err => console.log('SW update check failed:', err));
+          }
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          console.log('Service worker updated, reloading...');
+          window.location.reload();
+        });
+      }
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
